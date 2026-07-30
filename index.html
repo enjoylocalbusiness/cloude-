@@ -32,7 +32,6 @@
   }
   .display{font-family:'Zen Kaku Gothic New',sans-serif;}
 
-  /* backdrop: quiet horizon band, no drift/blur gimmicks */
   body::before{
     content:"";
     position:fixed; inset:0; z-index:0; pointer-events:none;
@@ -59,7 +58,6 @@
   .logo span{color:var(--blue);}
   .tagline{color:var(--text-muted); font-size:14.5px; line-height:1.85; margin:0;}
 
-  /* progress dots */
   .progress{display:flex; justify-content:center; gap:8px; margin:28px 0 40px;}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--line); transition:all .4s;}
   .dot.done{background:var(--blue);}
@@ -87,7 +85,6 @@
 
   .answer-area{margin-left:50px; animation:fadein .45s ease .1s both;}
 
-  /* topic tags */
   .cloud-field{display:flex; flex-wrap:wrap; gap:10px; margin:6px 0 16px;}
   .tag{
     font-family:'Zen Kaku Gothic New',sans-serif; font-weight:500; font-size:14.5px;
@@ -186,13 +183,15 @@
 </div>
 
 <script>
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxxZ3lharri-IkPmVsYcsDdGRCkseAAuTP7sfbUZqX9Sz62KAOHU-DR5BDGuTdc8MBv/exec";
+
 const TOPICS = ["SNS運用","コミュニティ","スモールビジネス","戦略設計","営業","マーケティング","ブランディング","イベント企画","クリエイティブ","キャリア","考え方","人間関係","コミュニケーション","生き方","お金"];
 const MAX_TOPICS = 5;
 
 const state = {
   topics: [],
-  metBefore: null,      // true / false
-  duration: null,       // 30/60/90
+  metBefore: null,
+  duration: null,
   igId: "",
   displayName: "",
 };
@@ -201,7 +200,7 @@ const flowEl = document.getElementById('flow');
 const progressEl = document.getElementById('progress');
 const STEP_COUNT = 5;
 let currentStep = 1;
-let completedThrough = 0; // highest step fully answered
+let completedThrough = 0;
 
 function renderProgress(){
   progressEl.innerHTML = '';
@@ -226,7 +225,6 @@ function goToStep(n){
 function renderFlow(){
   flowEl.innerHTML = '';
 
-  // ---- Step 1 recap or active ----
   if(currentStep > 1){
     flowEl.innerHTML += `<div class="recap">相談したいテーマ: <b>${state.topics.join('、')}</b>
       <button class="recap-edit" onclick="goToStep(1)">変更する</button></div>`;
@@ -245,7 +243,6 @@ function renderFlow(){
 
   if(currentStep < 2) return;
 
-  // ---- Step 2 ----
   if(currentStep > 2){
     flowEl.innerHTML += `<div class="recap">つかさと会ったこと: <b>${state.metBefore ? 'ある(知り合い)' : 'はじめて'}</b>
       <button class="recap-edit" onclick="goToStep(2)">変更する</button></div>`;
@@ -260,7 +257,6 @@ function renderFlow(){
     return;
   }
 
-  // ---- Step 3 ----
   if(currentStep > 3){
     flowEl.innerHTML += `<div class="recap">初回セッション: <b>${state.duration}分</b>
       <button class="recap-edit" onclick="goToStep(3)">変更する</button></div>`;
@@ -271,7 +267,6 @@ function renderFlow(){
     return;
   }
 
-  // ---- Step 4 ----
   if(currentStep > 4){
     flowEl.innerHTML += `<div class="recap">Instagram ID: <b>@${state.igId}</b>
       <button class="recap-edit" onclick="goToStep(4)">変更する</button></div>`;
@@ -289,9 +284,7 @@ function renderFlow(){
     return;
   }
 
-  // ---- Step 5 ----
   if(currentStep > 5){
-    // handled by thanks screen
   } else {
     flowEl.innerHTML += bubble(`<strong>当日、お呼びするお名前を教えてください。</strong><span class="small">ニックネームでも大丈夫です。</span>`);
     flowEl.innerHTML += `<div class="answer-area">
@@ -307,7 +300,6 @@ function renderFlow(){
   }
 }
 
-// ---- Step 1 logic ----
 function toggleTopic(t){
   const idx = state.topics.indexOf(t);
   if(idx>-1){
@@ -335,14 +327,12 @@ function confirmTopics(){
   goToStep(2);
 }
 
-// ---- Step 2 logic ----
 function setMet(val){
   state.metBefore = val;
-  state.duration = null; // reset duration since availability differs
+  state.duration = null;
   goToStep(3);
 }
 
-// ---- Step 3 logic ----
 const DURATIONS = [
   { min:30, priceFirst:null,  priceMet:0 },
   { min:60, priceFirst:5000,  priceMet:5000 },
@@ -383,7 +373,6 @@ function setDuration(min){
   goToStep(4);
 }
 
-// ---- Step 4 logic ----
 function confirmIg(){
   const inp = document.getElementById('ig-input');
   const val = inp.value.trim().replace(/^@/, '');
@@ -392,7 +381,6 @@ function confirmIg(){
   goToStep(5);
 }
 
-// ---- Step 5 / submit ----
 async function submitAll(){
   const inp = document.getElementById('name-input');
   const val = inp.value.trim();
@@ -410,10 +398,18 @@ async function submitAll(){
   };
 
   try{
-    const key = `entry:${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-    await window.storage.set(key, JSON.stringify(entry), true);
+    if(APPS_SCRIPT_URL && !APPS_SCRIPT_URL.includes('ここに')){
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(entry),
+      });
+    } else {
+      console.warn('APPS_SCRIPT_URL が未設定のため、スプレッドシートには送信されていません。');
+    }
   }catch(e){
-    console.error('保存に失敗しました', e);
+    console.error('送信に失敗しました', e);
   }
 
   currentStep = 6;
